@@ -64,10 +64,19 @@ void draw_polygon(
         float p0y = polygon_xy[i0_vtx * 2 + 1] - y;
         float p1x = polygon_xy[i1_vtx * 2 + 0] - x;
         float p1y = polygon_xy[i1_vtx * 2 + 1] - y;
-        // write a few lines of code to compute winding number (hint: use atan2)
+        // I use Sunday's method to compute the winding number
+        float isLeft = (p0x - p1x) * p0y - (p0y - p1y) * p0x;
+        
+        if (p0y <= 0.0 && p1y > 0.0 && isLeft > 0.0) {
+          winding_number -= 1.0;
+        }
+        
+        if (p0y > 0.0 && p1y <= 0.0 && isLeft < 0.0) {
+          winding_number += 1.0;
+        }
       }
       const int int_winding_number = int(std::round(winding_number));
-      if (int_winding_number == 1 ) { // if (x,y) is inside the polygon
+      if (int_winding_number > 0 ) { // if (x,y) is inside the polygon
         img_data[ih*width + iw] = brightness;
       }
     }
@@ -90,7 +99,29 @@ void dda_line(
     unsigned char brightness ) {
   auto dx = x1 - x0;
   auto dy = y1 - y0;
-  // write some code below to paint pixel on the line with color `brightness`
+  bool isSteep = abs(dy) > abs(dx);
+  // divide by zero is avoided
+  if (isSteep) {
+    std::swap(x0, y0);
+    std::swap(x1, y1);
+    std::swap(dx, dy);
+  }
+
+  if (x0 > x1) {
+    std::swap(x0, x1);
+    std::swap(y0, y1);
+  }
+  
+  auto slope = dy / dx;
+
+  for (int x = int(floor(x0)); x <= int(floor(x1)); x++) {
+    int y = int(floor(y0 + slope * (float(x) - x0)));
+    if (isSteep) {
+      img_data[x * width + y] = brightness;
+    } else {
+      img_data[y * width + x] = brightness;
+    }
+  }
 }
 
 int main() {
