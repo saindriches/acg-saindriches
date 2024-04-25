@@ -1,3 +1,4 @@
+#include <deque>
 #include <filesystem>
 // #include <experimental/filesystem> // uncomment here if the <filesystem> cannot be included above
 //
@@ -63,13 +64,74 @@ int number_of_intersection_ray_against_quadratic_bezier(
     const Eigen::Vector2f &dir,
     const Eigen::Vector2f &ps,
     const Eigen::Vector2f &pc,
-    const Eigen::Vector2f &pe) {
-  // comment out below to do the assignment
-  return number_of_intersection_ray_against_edge(org, dir, ps, pe);
-  // write some code below to find the intersection between ray and the quadratic
+    const Eigen::Vector2f &pe,
+    int iter_count) {
+  // Sorry, but I met a difficulty in implementing this function with the desired method.
+  // I hope I can update this later.
+  // Currently, it's a simple iterative method.
+  auto make_triangle = [](Eigen::Vector2f &ps, Eigen::Vector2f &pc, Eigen::Vector2f &pe) {
+    Eigen::Matrix<float, 3, 2> triangle;
+    triangle.row(0) = ps;
+    triangle.row(1) = pc;
+    triangle.row(2) = pe;
+    return triangle;
+  };
+  std::deque<Eigen::Matrix<float, 3, 2>> triangles;
+  std::deque<int> iter_indices;
+  
+  triangles.push_back(make_triangle(ps.const_cast_derived(), pc.const_cast_derived(), pe.const_cast_derived()));
+  iter_indices.push_back(0);
+  
+  int last_iter_index = -1;
+  int cross_count = 0;
+  while (!triangles.empty()) {
+    Eigen::Matrix<float, 3, 2> triangle = triangles.front();
+    int iter_index = iter_indices.front();
+
+    triangles.pop_front();
+    iter_indices.pop_front();
+
+    Eigen::Vector2f p0, p1, p2;
+    p0 = triangle.row(0);
+    p1 = triangle.row(1);
+    p2 = triangle.row(2);
+    
+    if (iter_index > last_iter_index) {
+      if (iter_index > iter_count) { break; }
+      last_iter_index = iter_index;
+      cross_count = 0;
+    }
+
+    int c0 = number_of_intersection_ray_against_edge(org, dir, p0, p1);
+    int c1 = number_of_intersection_ray_against_edge(org, dir, p1, p2);
+    int c2 = number_of_intersection_ray_against_edge(org, dir, p0, p2);
+    
+    int intersect_count = c0 + c1 + c2;
+    cross_count += intersect_count > 1 && c2 == 1;
+
+    if (intersect_count > 0) {
+      Eigen::Vector2f p3, p4, p5;
+      p3 = (p0 + p1) / 2;
+      p4 = (p1 + p2) / 2;
+      p5 = (p3 + p4) / 2;
+
+      triangles.push_back(make_triangle(p0, p3, p5));
+      triangles.push_back(make_triangle(p5, p4, p2));
+
+      iter_indices.push_back(iter_index + 1);
+      iter_indices.push_back(iter_index + 1);
+    }
+  }
+    
+  return cross_count;
 }
 
-int main() {
+int main(int argc, char *argv[]) {
+  int iter_count = 5;
+  if(argc >= 2) {
+    iter_count = std::stoi(argv[1]);
+  };
+  
   const auto input_file_path = std::filesystem::path(PROJECT_SOURCE_DIR) / ".." / "asset" / "r.svg";
   const auto [width, height, shape] = acg::svg_get_image_size_and_shape(input_file_path);
   if (width == 0) { // something went wrong in loading the function
@@ -90,7 +152,8 @@ int main() {
           if (edge.is_bezier) { // in case the edge is a quadratic Bézier
             count_cross += number_of_intersection_ray_against_quadratic_bezier(
                 org, dir,
-                edge.ps, edge.pc, edge.pe);
+                edge.ps, edge.pc, edge.pe,
+                iter_count);
           } else { // in case the edge is a line segment
             count_cross += number_of_intersection_ray_against_edge(
                 org, dir,
