@@ -27,7 +27,37 @@ void main()
         //x0 = ???
         //y0 = ???
         //z0 = ???
+        
+        // reflect the vertex
+        vec3 v = vec3(x0, y0, z0) - org;
+        vec3 r = v - 2.0 * dot(v, nrm) * nrm;
+        v = r + org;
+        
+        // mirror plane equation
+        vec4 p = vec4(nrm, -dot(nrm, org)) / nrm.z;
+        vec4 q = vec4(v.x, v.y, 0.0, 1.0);
+        
+        // calculate the z of intersection point
+        float t = -dot(p, q) * p.z;
+        
+        // This is inspired from something often needed in machine learning that maps the value to a range,
+        // a sigmoid-like function, I'm not sure if it's an appropriate solution
+        x0 = v.x;
+        y0 = v.y;
+        z0 = t - (2.0 / (1.0 + exp(-(t - v.z))) - 1.0) * (t - -1.0);
     }
+    
+//    // Some debug code
+//    z0 = -z0;
+//    float angle = radians(-89);
+//    y0 = y0 * cos(angle) - z0 * sin(angle);
+//    z0 = y0 * sin(angle) + z0 * cos(angle);
+//    z0 = -z0;
+//
+//    x0 = x0 * 0.5;
+//    y0 = y0 * 0.5;
+//    z0 = z0 * 0.5;
+    
     // do not edit below
 
     // "gl_Position" is the *output* vertex coordinate in the
