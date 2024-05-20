@@ -37,13 +37,35 @@ float SDF(vec3 pos)
 {
   float d0 = sdCappedCylinder(pos, len_cylinder, rad_cylinder);
   // write some code to combine the signed distance fields above to design the object described in the README.md
-  return d0; // comment out and define new distance
+  
+  vec3 pos_cy2 = vec3(pos.y, pos.z, pos.x);
+  vec3 pos_cy3 = vec3(pos.z, pos.x, pos.y);
+  
+  float d1 = sdCappedCylinder(pos_cy2, len_cylinder, rad_cylinder);
+  float d2 = sdCappedCylinder(pos_cy3, len_cylinder, rad_cylinder);
+  
+  d0 = min(min(d0, d1), d2);
+  
+  float d3 = sdSphere(pos, rad_sphere);
+  float d4 = sdBox(pos, vec3(box_size, box_size, box_size));
+    
+//  return d0; // comment out and define new distance
+  return max(-d0, max(d3, d4));
 }
 
 /// RGB color at the position `pos`
 vec3 SDF_color(vec3 pos)
 {
   // write some code below to return color (RGB from 0 to 1) to paint the object describe in README.md
+  
+  if(abs(sdSphere(pos, rad_sphere)) < 1.0e-3){
+      return vec3(0., 0., 1.);
+  }
+  
+  if(abs(sdBox(pos, vec3(box_size, box_size, box_size))) < 1.0e-3){
+      return vec3(1., 0., 0.);
+  }
+  
   return vec3(0., 1., 0.); // comment out and define new color
 }
 
@@ -62,7 +84,9 @@ void main()
   // gl_FragCoord: the coordinate of the pixel
   // left-bottom is (0,0), right-top is (W,H)
   // https://www.khronos.org/registry/OpenGL-Refpages/gl4/html/gl_FragCoord.xhtml
-  vec2 scr_xy = gl_FragCoord.xy / vec2(500,500) * 2.0 - vec2(1,1); // canonical screen position [-1,+1] x [-1,+1]
+  
+  // modified to match the size in preview
+  vec2 scr_xy = gl_FragCoord.xy / vec2(500,500) - vec2(1,1); // canonical screen position [-1,+1] x [-1,+1]
   vec3 src = frame_x * scr_xy.x + frame_y * scr_xy.y + frame_z * 1;  // source of ray from pixel
   vec3 dir = -frame_z;  // direction of ray (looking at the origin)
 
